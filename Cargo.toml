@@ -1,18 +1,17 @@
 [package]
 name = "gorn"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Calculates blake2 hash from file or directory."
 authors = ["Patsakula Nikita <nikita.patsakula@gmail.com>"]
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license = "MIT"
 
 [dependencies]
-blake2 = "0.9.2"
+blake2 = "0.9"
 clap = "3.0.0-beta.5"
-hex = "0.4.3"
-rayon = "1.5.1"
-walkdir = "2.3.2"
+hex = "0.4"
+rayon = "1.5"
+walkdir = "2.3"
 
 [profile.release]
 lto = "thin"
