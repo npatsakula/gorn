@@ -14,6 +14,10 @@ struct Opt {
     /// Print entire hash tree.
     #[clap(long)]
     print_tree: bool,
+
+    /// Find common hashes in directory.
+    #[clap(short, long)]
+    common: bool,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -21,14 +25,34 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let hashes = build_file_tree(&opts.path).map(calculate_hashes::<Blake2b>)?;
     let merged = merge_hashes(hashes.clone());
+    let string_hashes = print_hashes(hashes);
 
     if opts.print_tree {
-        let string_hashes = print_hashes(hashes);
         println!("{:#?}", string_hashes);
+    }
+
+    if opts.common {
+        println!("{:#?}", find_commons(string_hashes));
     }
 
     println!("{:02x}", &merged.finalize());
     Ok(())
+}
+
+fn find_commons(string_hashes: BTreeMap<String, String>) -> (i32, Vec<[String; 2]>) {
+    let mut commons = Vec::new();
+    let mut counter = 0;
+
+    for (file_name1, hash1) in string_hashes.iter() {
+        for (file_name2, hash2) in string_hashes.iter() {
+            if &hash1 == &hash2 {
+                counter += 1;
+                commons.push([file_name1.to_owned(), file_name2.to_owned()])
+            }
+        }
+    }
+
+    (counter, commons)
 }
 
 fn build_file_tree(path: &Path) -> std::io::Result<BTreeMap<String, File>> {
