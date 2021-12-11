@@ -1,7 +1,12 @@
 use blake2::{Blake2b, Digest};
 use clap::Parser;
 use rayon::prelude::*;
-use std::{collections::BTreeMap, fs::File, io::Read, path::Path};
+use std::{
+    collections::{BTreeMap, HashMap},
+    fs::File,
+    io::Read,
+    path::Path,
+};
 use walkdir::WalkDir;
 
 #[derive(Debug, Parser)]
@@ -14,21 +19,50 @@ struct Opt {
     /// Print entire hash tree.
     #[clap(long)]
     print_tree: bool,
+
+    /// Find duplicate files by hashes in directory.
+    #[clap(short, long)]
+    duplicates: bool,
+
+    /// Count duplicate files by hashes in directory.
+    #[clap(short, long)]
+    count: bool,
 }
 
+#[allow(unused_variables, unreachable_patterns)]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let opts = Opt::parse();
 
     let hashes = build_file_tree(&opts.path).map(calculate_hashes::<Blake2b>)?;
     let merged = merge_hashes(hashes.clone());
+    let string_hashes = print_hashes(hashes);
 
     if opts.print_tree {
-        let string_hashes = print_hashes(hashes);
-        println!("{:#?}", string_hashes);
+        println!("{:#?}", string_hashes)
+    }
+
+    if opts.duplicates {
+        println!("{:#?}", find_duplicates(&string_hashes))
+    }
+    if opts.count {
+        println!("{}", find_duplicates(&string_hashes).len())
     }
 
     println!("{:02x}", &merged.finalize());
     Ok(())
+}
+
+fn find_duplicates(hashes: &BTreeMap<String, String>) -> HashMap<&str, Vec<&str>> {
+    let mut result: HashMap<&str, Vec<&str>> = HashMap::with_capacity(hashes.len());
+
+    for (path, hash) in hashes {
+        result.entry(hash).or_default().push(path);
+    }
+
+    result
+        .into_iter()
+        .filter(|(_hash, pathes)| pathes.len() > 1)
+        .collect()
 }
 
 fn build_file_tree(path: &Path) -> std::io::Result<BTreeMap<String, File>> {
@@ -86,4 +120,32 @@ fn hash<H: Digest + Default>(mut file: File) -> H {
     }
 
     hasher
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::find_duplicates;
+    use std::collections::{BTreeMap, HashMap};
+
+    #[test]
+    fn find_common() {
+        let mut hello_map = BTreeMap::new();
+        hello_map.insert("hello".to_owned(), "48656c6c6f20776f726c6421".to_owned());
+        hello_map.insert(
+            "hello_world".to_owned(),
+            "48656c6c6f20776f726c6421".to_owned(),
+        );
+        hello_map.insert(
+            "Hello, world!".to_owned(),
+            "48656c6c6f20776f726c6421".to_owned(),
+        );
+
+        let result = find_duplicates(&hello_map);
+        let mut result_hash = HashMap::new();
+        result_hash.insert(
+            "48656c6c6f20776f726c6421",
+            vec!["Hello, world!", "hello", "hello_world"],
+        );
+        assert_eq!(result, result_hash);
+    }
 }
