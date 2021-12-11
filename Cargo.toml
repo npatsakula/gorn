@@ -7,7 +7,7 @@ authors = ["Patsakula Nikita <nikita.patsakula@gmail.com>"]
 license = "MIT"
 
 [dependencies]
-blake2 = "0.9"
+blake2 = "0.10"
 clap = "3.0.0-beta.5"
 hex = "0.4"
 rayon = "1.5"
